@@ -11,6 +11,6 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["tabs", "contextMenus"],
+  "permissions": ["tabs", "contextMenus", "storage"],
   "host_permissions": ["*://*/Windchill/*", "*://*/windchill/*"]
 }

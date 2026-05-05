@@ -1,11 +1,15 @@
 import { enableInfoFromPA, parseUrl, toggleJcaDebug } from './utils/urlHelper.js';
-import { isWindchillUrl } from './utils/windchillHelper.js';
+import {
+  isWindchillUrl,
+  isWindchillUserOrGroupUrl,
+} from './utils/windchillHelper.js';
 
 const MENU_IDS = {
   root: 'windchill-helper',
   fullUserGroupInfo: 'full-user-group-info',
   toggleJcaDebug: 'toggle-jca-debug',
 };
+const AUTO_USER_GROUP_INFO_KEY = 'autoUserGroupInfo';
 
 function logRuntimeError(context) {
   if (!chrome.runtime.lastError) {
@@ -80,6 +84,43 @@ function updateTabUrl(tabId, url, errorContext) {
   });
 }
 
+function isAutoUserGroupInfoEnabled(callback) {
+  chrome.storage.local.get([AUTO_USER_GROUP_INFO_KEY], (result) => {
+    if (chrome.runtime.lastError) {
+      console.warn(
+        'Failed to load Auto User/Group info setting: ' +
+          chrome.runtime.lastError.message,
+      );
+      callback(false);
+      return;
+    }
+
+    callback(Boolean(result[AUTO_USER_GROUP_INFO_KEY]));
+  });
+}
+
+function tryEnableAutoUserGroupInfoForTab(tab) {
+  isAutoUserGroupInfoEnabled((enabled) => {
+    if (!enabled) {
+      return;
+    }
+
+    withWindchillTab(tab, 'enable Auto User/Group info', (url, tabId) => {
+      if (!isWindchillUserOrGroupUrl(url)) {
+        return;
+      }
+
+      const changed = enableInfoFromPA(url);
+
+      if (!changed) {
+        return;
+      }
+
+      updateTabUrl(tabId, url, 'Failed to update tab after enabling Auto User/Group info');
+    });
+  });
+}
+
 function handleFullUserGroupInfo(tab) {
   withWindchillTab(tab, 'enable Full User/Group info', (url, tabId) => {
     const changed = enableInfoFromPA(url);
@@ -123,4 +164,48 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === MENU_IDS.toggleJcaDebug) {
     handleToggleJcaDebug(tab);
   }
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (!changeInfo.url) {
+    return;
+  }
+
+  tryEnableAutoUserGroupInfoForTab({
+    ...tab,
+    id: tabId,
+    url: changeInfo.url,
+  });
+});
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type !== 'auto-user-group-info-changed') {
+    return;
+  }
+
+  if (!message.enabled) {
+    sendResponse({ ok: true });
+    return;
+  }
+
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (chrome.runtime.lastError) {
+      console.warn(
+        'Failed to get the active tab for Auto User/Group info: ' +
+          chrome.runtime.lastError.message,
+      );
+      sendResponse({ ok: false });
+      return;
+    }
+
+    if (!tabs || !tabs.length) {
+      sendResponse({ ok: true });
+      return;
+    }
+
+    tryEnableAutoUserGroupInfoForTab(tabs[0]);
+    sendResponse({ ok: true });
+  });
+
+  return true;
 });

@@ -7,8 +7,11 @@ import {
 } from './utils/urlHelper.js';
 import { isWindchillUrl } from './utils/windchillHelper.js';
 
+const AUTO_USER_GROUP_INFO_KEY = 'autoUserGroupInfo';
+
 document.addEventListener('DOMContentLoaded', () => {
   const infoFromPACheckbox = document.getElementById('infoFromPA');
+  const autoUserGroupInfoCheckbox = document.getElementById('autoUserGroupInfo');
   const jcaDebugCheckbox = document.getElementById('jcaDebug');
   const applyBtn = document.getElementById('applyBtn');
   const statusEl = document.getElementById('status');
@@ -36,6 +39,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function syncPopupState() {
+    chrome.storage.local.get([AUTO_USER_GROUP_INFO_KEY], (result) => {
+      if (chrome.runtime.lastError) {
+        setStatus(
+          'Failed to load popup settings: ' + chrome.runtime.lastError.message,
+        );
+        return;
+      }
+
+      autoUserGroupInfoCheckbox.checked = Boolean(result[AUTO_USER_GROUP_INFO_KEY]);
+    });
+
     withActiveTab((tab) => {
       if (!tab.url) {
         setStatus('The current tab has no URL.');
@@ -116,6 +130,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function handleAutoUserGroupInfoChange() {
+    const enabled = autoUserGroupInfoCheckbox.checked;
+
+    chrome.storage.local.set({ [AUTO_USER_GROUP_INFO_KEY]: enabled }, () => {
+      if (chrome.runtime.lastError) {
+        setStatus(
+          'Failed to save popup settings: ' + chrome.runtime.lastError.message,
+        );
+        autoUserGroupInfoCheckbox.checked = !enabled;
+        return;
+      }
+
+      chrome.runtime.sendMessage(
+        {
+          type: 'auto-user-group-info-changed',
+          enabled,
+        },
+        () => {
+          if (chrome.runtime.lastError) {
+            setStatus(
+              'Auto mode saved, but background sync failed: ' +
+                chrome.runtime.lastError.message,
+            );
+            return;
+          }
+
+          setStatus(
+            enabled
+              ? 'Auto User/Group info enabled.'
+              : 'Auto User/Group info disabled.',
+          );
+        },
+      );
+    });
+  }
+
   syncPopupState();
   applyBtn.addEventListener('click', handleApplyClick);
+  autoUserGroupInfoCheckbox.addEventListener('change', handleAutoUserGroupInfoChange);
 });
