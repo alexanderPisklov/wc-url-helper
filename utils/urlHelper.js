@@ -2,42 +2,61 @@ export function parseUrl(urlString) {
   return new URL(urlString);
 }
 
+export function hasParamValue(url, key, value) {
+  return url.searchParams.get(key) === value;
+}
+
+export function setParamValue(url, key, value) {
+  if (hasParamValue(url, key, value)) {
+    return false;
+  }
+
+  url.searchParams.set(key, value);
+  return true;
+}
+
+export function removeParam(url, key) {
+  if (!url.searchParams.has(key)) {
+    return false;
+  }
+
+  url.searchParams.delete(key);
+  return true;
+}
+
+export function toggleParamValue(url, key, enabledValue) {
+  if (hasParamValue(url, key, enabledValue)) {
+    return removeParam(url, key);
+  }
+
+  return setParamValue(url, key, enabledValue);
+}
+
+export function enableInfoFromPA(url) {
+  return setParamValue(url, 'infoFromPA', 'true');
+}
+
 export function isJcaDebugEnabled(url) {
-  return url.searchParams.get('jcaDebug') === '1';
+  return hasParamValue(url, 'jcaDebug', '1');
 }
 
 export function enableJcaDebug(url) {
-  if (isJcaDebugEnabled(url)) {
-    return false;
-  }
-
-  url.searchParams.set('jcaDebug', '1');
-  return true;
+  return setParamValue(url, 'jcaDebug', '1');
 }
 
 export function disableJcaDebug(url) {
-  if (!url.searchParams.has('jcaDebug')) {
-    return false;
-  }
-
-  url.searchParams.delete('jcaDebug');
-  return true;
+  return removeParam(url, 'jcaDebug');
 }
 
 export function toggleJcaDebug(url) {
-  if (isJcaDebugEnabled(url)) {
-    return disableJcaDebug(url);
-  }
-
-  return enableJcaDebug(url);
+  return toggleParamValue(url, 'jcaDebug', '1');
 }
 
 export function addWindchillParams(url, options = {}) {
   let changed = false;
 
-  if (options.infoFromPA && url.searchParams.get('infoFromPA') !== 'true') {
-    url.searchParams.set('infoFromPA', 'true');
-    changed = true;
+  if (options.infoFromPA) {
+    changed = enableInfoFromPA(url) || changed;
   }
 
   return changed;
