@@ -1,19 +1,22 @@
 import {
-  addWindchillParams,
+  disableInfoFromPA,
   disableJcaDebug,
   enableJcaDebug,
+  enableInfoFromPA,
+  isInfoFromPAEnabled,
   isJcaDebugEnabled,
   parseUrl,
 } from './utils/urlHelper.js';
 import { isWindchillUrl } from './utils/windchillHelper.js';
 
 const AUTO_USER_GROUP_INFO_KEY = 'autoUserGroupInfo';
+const INFO_FROM_PA_KEY = 'infoFromPA';
+const JCA_DEBUG_KEY = 'jcaDebug';
 
 document.addEventListener('DOMContentLoaded', () => {
   const infoFromPACheckbox = document.getElementById('infoFromPA');
   const autoUserGroupInfoCheckbox = document.getElementById('autoUserGroupInfo');
   const jcaDebugCheckbox = document.getElementById('jcaDebug');
-  const applyBtn = document.getElementById('applyBtn');
   const statusEl = document.getElementById('status');
 
   function setStatus(text) {
@@ -39,16 +42,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function syncPopupState() {
-    chrome.storage.local.get([AUTO_USER_GROUP_INFO_KEY], (result) => {
-      if (chrome.runtime.lastError) {
-        setStatus(
-          'Failed to load popup settings: ' + chrome.runtime.lastError.message,
-        );
-        return;
-      }
+    chrome.storage.local.get(
+      [AUTO_USER_GROUP_INFO_KEY, INFO_FROM_PA_KEY, JCA_DEBUG_KEY],
+      (result) => {
+        if (chrome.runtime.lastError) {
+          setStatus(
+            'Failed to load popup settings: ' + chrome.runtime.lastError.message,
+          );
+          return;
+        }
 
-      autoUserGroupInfoCheckbox.checked = Boolean(result[AUTO_USER_GROUP_INFO_KEY]);
-    });
+        autoUserGroupInfoCheckbox.checked = Boolean(result[AUTO_USER_GROUP_INFO_KEY]);
+        infoFromPACheckbox.checked = Boolean(result[INFO_FROM_PA_KEY]);
+        jcaDebugCheckbox.checked = Boolean(result[JCA_DEBUG_KEY]);
+      },
+    );
 
     withActiveTab((tab) => {
       if (!tab.url) {
@@ -64,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
+        infoFromPACheckbox.checked = isInfoFromPAEnabled(url);
         jcaDebugCheckbox.checked = isJcaDebugEnabled(url);
       } catch (error) {
         setStatus('Invalid URL: ' + error.message);
@@ -71,13 +80,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function getSelectedOptions() {
-    return {
-      infoFromPA: infoFromPACheckbox.checked,
-    };
+  function saveSetting(key, value, onSaved) {
+    chrome.storage.local.set({ [key]: value }, () => {
+      if (chrome.runtime.lastError) {
+        setStatus(
+          'Failed to save popup settings: ' + chrome.runtime.lastError.message,
+        );
+        return;
+      }
+
+      onSaved();
+    });
   }
 
-  function handleApplyClick() {
+  function applyCurrentTabSettings() {
     setStatus('');
 
     withActiveTab((tab) => {
@@ -101,7 +117,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      let changed = addWindchillParams(url, getSelectedOptions());
+      let changed = false;
+
+      if (infoFromPACheckbox.checked) {
+        changed = enableInfoFromPA(url) || changed;
+      } else {
+        changed = disableInfoFromPA(url) || changed;
+      }
 
       if (jcaDebugCheckbox.checked) {
         changed = enableJcaDebug(url) || changed;
@@ -130,43 +152,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function syncAutoUserGroupInfoInBackground(enabled) {
+    chrome.runtime.sendMessage(
+      {
+        type: 'auto-user-group-info-changed',
+        enabled,
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          setStatus(
+            'Auto mode saved, but background sync failed: ' +
+              chrome.runtime.lastError.message,
+          );
+          return;
+        }
+
+        setStatus(
+          enabled
+            ? 'Auto User/Group info enabled.'
+            : 'Auto User/Group info disabled.',
+        );
+      },
+    );
+  }
+
+  function handleInfoFromPAChange() {
+    const enabled = infoFromPACheckbox.checked;
+
+    saveSetting(INFO_FROM_PA_KEY, enabled, () => {
+      applyCurrentTabSettings();
+    });
+  }
+
   function handleAutoUserGroupInfoChange() {
     const enabled = autoUserGroupInfoCheckbox.checked;
 
-    chrome.storage.local.set({ [AUTO_USER_GROUP_INFO_KEY]: enabled }, () => {
-      if (chrome.runtime.lastError) {
-        setStatus(
-          'Failed to save popup settings: ' + chrome.runtime.lastError.message,
-        );
-        autoUserGroupInfoCheckbox.checked = !enabled;
-        return;
-      }
+    saveSetting(AUTO_USER_GROUP_INFO_KEY, enabled, () => {
+      syncAutoUserGroupInfoInBackground(enabled);
+    });
+  }
 
-      chrome.runtime.sendMessage(
-        {
-          type: 'auto-user-group-info-changed',
-          enabled,
-        },
-        () => {
-          if (chrome.runtime.lastError) {
-            setStatus(
-              'Auto mode saved, but background sync failed: ' +
-                chrome.runtime.lastError.message,
-            );
-            return;
-          }
+  function handleJcaDebugChange() {
+    const enabled = jcaDebugCheckbox.checked;
 
-          setStatus(
-            enabled
-              ? 'Auto User/Group info enabled.'
-              : 'Auto User/Group info disabled.',
-          );
-        },
-      );
+    saveSetting(JCA_DEBUG_KEY, enabled, () => {
+      applyCurrentTabSettings();
     });
   }
 
   syncPopupState();
-  applyBtn.addEventListener('click', handleApplyClick);
+  infoFromPACheckbox.addEventListener('change', handleInfoFromPAChange);
   autoUserGroupInfoCheckbox.addEventListener('change', handleAutoUserGroupInfoChange);
+  jcaDebugCheckbox.addEventListener('change', handleJcaDebugChange);
 });

@@ -95,6 +95,17 @@ export function enableInfoFromPA(url) {
   return removedFromOuterQuery || addedToHashQuery;
 }
 
+export function isInfoFromPAEnabled(url) {
+  return hasHashParamValue(url, 'infoFromPA', 'true');
+}
+
+export function disableInfoFromPA(url) {
+  const removedFromOuterQuery = removeParam(url, 'infoFromPA');
+  const removedFromHashQuery = removeHashParam(url, 'infoFromPA');
+
+  return removedFromOuterQuery || removedFromHashQuery;
+}
+
 export function isJcaDebugEnabled(url) {
   return hasHashParamValue(url, 'jcaDebug', '1');
 }
