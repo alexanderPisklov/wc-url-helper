@@ -10,8 +10,6 @@ import {
 import { isWindchillUrl } from './utils/windchillHelper.js';
 
 const AUTO_USER_GROUP_INFO_KEY = 'autoUserGroupInfo';
-const INFO_FROM_PA_KEY = 'infoFromPA';
-const JCA_DEBUG_KEY = 'jcaDebug';
 
 document.addEventListener('DOMContentLoaded', () => {
   const infoFromPACheckbox = document.getElementById('infoFromPA');
@@ -42,21 +40,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function syncPopupState() {
-    chrome.storage.local.get(
-      [AUTO_USER_GROUP_INFO_KEY, INFO_FROM_PA_KEY, JCA_DEBUG_KEY],
-      (result) => {
-        if (chrome.runtime.lastError) {
-          setStatus(
-            'Failed to load popup settings: ' + chrome.runtime.lastError.message,
-          );
-          return;
-        }
+    chrome.storage.local.get([AUTO_USER_GROUP_INFO_KEY], (result) => {
+      if (chrome.runtime.lastError) {
+        setStatus(
+          'Failed to load popup settings: ' + chrome.runtime.lastError.message,
+        );
+        return;
+      }
 
-        autoUserGroupInfoCheckbox.checked = Boolean(result[AUTO_USER_GROUP_INFO_KEY]);
-        infoFromPACheckbox.checked = Boolean(result[INFO_FROM_PA_KEY]);
-        jcaDebugCheckbox.checked = Boolean(result[JCA_DEBUG_KEY]);
-      },
-    );
+      autoUserGroupInfoCheckbox.checked = Boolean(result[AUTO_USER_GROUP_INFO_KEY]);
+    });
 
     withActiveTab((tab) => {
       if (!tab.url) {
@@ -80,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function saveSetting(key, value, onSaved) {
+  function saveGlobalSetting(key, value, onSaved) {
     chrome.storage.local.set({ [key]: value }, () => {
       if (chrome.runtime.lastError) {
         setStatus(
@@ -177,27 +170,19 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleInfoFromPAChange() {
-    const enabled = infoFromPACheckbox.checked;
-
-    saveSetting(INFO_FROM_PA_KEY, enabled, () => {
-      applyCurrentTabSettings();
-    });
+    applyCurrentTabSettings();
   }
 
   function handleAutoUserGroupInfoChange() {
     const enabled = autoUserGroupInfoCheckbox.checked;
 
-    saveSetting(AUTO_USER_GROUP_INFO_KEY, enabled, () => {
+    saveGlobalSetting(AUTO_USER_GROUP_INFO_KEY, enabled, () => {
       syncAutoUserGroupInfoInBackground(enabled);
     });
   }
 
   function handleJcaDebugChange() {
-    const enabled = jcaDebugCheckbox.checked;
-
-    saveSetting(JCA_DEBUG_KEY, enabled, () => {
-      applyCurrentTabSettings();
-    });
+    applyCurrentTabSettings();
   }
 
   syncPopupState();

@@ -30,8 +30,12 @@ function setHashQueryParts(url, hashPath, searchParams) {
   url.hash = '';
 }
 
+function getParamValue(url, key) {
+  return url.searchParams.get(key);
+}
+
 export function hasParamValue(url, key, value) {
-  return url.searchParams.get(key) === value;
+  return getParamValue(url, key) === value;
 }
 
 export function setParamValue(url, key, value) {
@@ -65,6 +69,11 @@ export function hasHashParamValue(url, key, value) {
   return searchParams.get(key) === value;
 }
 
+function getHashParamValue(url, key) {
+  const { searchParams } = getHashQueryParts(url);
+  return searchParams.get(key);
+}
+
 export function setHashParamValue(url, key, value) {
   if (hasHashParamValue(url, key, value)) {
     return false;
@@ -96,7 +105,7 @@ export function enableInfoFromPA(url) {
 }
 
 export function isInfoFromPAEnabled(url) {
-  return hasHashParamValue(url, 'infoFromPA', 'true');
+  return getParamValue(url, 'infoFromPA') === 'true' || getHashParamValue(url, 'infoFromPA') === 'true';
 }
 
 export function disableInfoFromPA(url) {
@@ -107,12 +116,20 @@ export function disableInfoFromPA(url) {
 }
 
 export function isJcaDebugEnabled(url) {
-  return hasHashParamValue(url, 'jcaDebug', '1');
+  const outerValue = getParamValue(url, 'jcaDebug');
+  const hashValue = getHashParamValue(url, 'jcaDebug');
+
+  return (
+    outerValue === 'true' ||
+    outerValue === '1' ||
+    hashValue === 'true' ||
+    hashValue === '1'
+  );
 }
 
 export function enableJcaDebug(url) {
   const removedFromOuterQuery = removeParam(url, 'jcaDebug');
-  const addedToHashQuery = setHashParamValue(url, 'jcaDebug', '1');
+  const addedToHashQuery = setHashParamValue(url, 'jcaDebug', 'true');
 
   return removedFromOuterQuery || addedToHashQuery;
 }
