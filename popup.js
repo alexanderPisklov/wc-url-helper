@@ -21,6 +21,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const jcaDebugCheckbox = document.getElementById('jcaDebug');
   const statusEl = document.getElementById('status');
 
+  if (!statusEl) {
+    console.warn('Windchill Helper: status element not found: status');
+    return;
+  }
+
+  if (!infoFromPACheckbox) {
+    console.warn('Windchill Helper: toggle not found: infoFromPA');
+    return;
+  }
+
+  if (!autoUserGroupInfoCheckbox) {
+    console.warn('Windchill Helper: toggle not found: autoUserGroupInfo');
+    return;
+  }
+
+  if (!jcaDebugCheckbox) {
+    console.warn('Windchill Helper: toggle not found: jcaDebug');
+    return;
+  }
+
   function setStatus(text) {
     statusEl.textContent = text || '';
   }
