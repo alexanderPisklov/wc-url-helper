@@ -4,12 +4,19 @@ import {
   isWindchillUserOrGroupUrl,
 } from './utils/windchillHelper.js';
 
+const WINDCHILL_URL_PATTERNS = [
+  '*://*/Windchill/*',
+  '*://*/windchill/*',
+  '*://*/WINDCHILL/*',
+];
 const MENU_IDS = {
   root: 'windchill-helper',
   fullUserGroupInfo: 'full-user-group-info',
   toggleJcaDebug: 'toggle-jca-debug',
 };
 const AUTO_USER_GROUP_INFO_KEY = 'autoUserGroupInfo';
+const FULL_USER_GROUP_INFO_SKIPPED_MESSAGE =
+  'Windchill Helper: Full User/Group info skipped \u2014 current page is not WTUser or WTGroup.';
 
 function logRuntimeError(context) {
   if (!chrome.runtime.lastError) {
@@ -27,6 +34,7 @@ function createContextMenus() {
       id: MENU_IDS.root,
       title: 'Windchill Helper',
       contexts: ['page'],
+      documentUrlPatterns: WINDCHILL_URL_PATTERNS,
     });
 
     logRuntimeError('Failed to create Windchill Helper menu');
@@ -36,6 +44,7 @@ function createContextMenus() {
       parentId: MENU_IDS.root,
       title: 'Full User/Group info',
       contexts: ['page'],
+      documentUrlPatterns: WINDCHILL_URL_PATTERNS,
     });
 
     logRuntimeError('Failed to create Full User/Group info menu item');
@@ -45,6 +54,7 @@ function createContextMenus() {
       parentId: MENU_IDS.root,
       title: 'Toggle jcaDebug mode',
       contexts: ['page'],
+      documentUrlPatterns: WINDCHILL_URL_PATTERNS,
     });
 
     logRuntimeError('Failed to create Toggle jcaDebug mode menu item');
@@ -107,6 +117,7 @@ function tryEnableAutoUserGroupInfoForTab(tab) {
 
     withWindchillTab(tab, 'enable Auto User/Group info', (url, tabId) => {
       if (!isWindchillUserOrGroupUrl(url)) {
+        console.log(FULL_USER_GROUP_INFO_SKIPPED_MESSAGE);
         return;
       }
 
@@ -123,6 +134,11 @@ function tryEnableAutoUserGroupInfoForTab(tab) {
 
 function handleFullUserGroupInfo(tab) {
   withWindchillTab(tab, 'enable Full User/Group info', (url, tabId) => {
+    if (!isWindchillUserOrGroupUrl(url)) {
+      console.log(FULL_USER_GROUP_INFO_SKIPPED_MESSAGE);
+      return;
+    }
+
     const changed = enableInfoFromPA(url);
 
     if (!changed) {
@@ -144,7 +160,6 @@ function handleToggleJcaDebug(tab) {
     }
 
     updateTabUrl(tabId, url, 'Failed to update tab after toggling jcaDebug');
-    return;
   });
 }
 

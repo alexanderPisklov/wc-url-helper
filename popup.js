@@ -7,9 +7,13 @@ import {
   isJcaDebugEnabled,
   parseUrl,
 } from './utils/urlHelper.js';
-import { isWindchillUrl } from './utils/windchillHelper.js';
+import { isWindchillUrl, isWindchillUserOrGroupUrl } from './utils/windchillHelper.js';
 
 const AUTO_USER_GROUP_INFO_KEY = 'autoUserGroupInfo';
+const INFO_FROM_PA_KEY = 'infoFromPA';
+const JCA_DEBUG_KEY = 'jcaDebug';
+const FULL_USER_GROUP_INFO_SKIPPED_MESSAGE =
+  'Windchill Helper: Full User/Group info skipped \u2014 current page is not WTUser or WTGroup.';
 
 document.addEventListener('DOMContentLoaded', () => {
   const infoFromPACheckbox = document.getElementById('infoFromPA');
@@ -73,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function saveGlobalSetting(key, value, onSaved) {
+  function savePopupSetting(key, value, onSaved) {
     chrome.storage.local.set({ [key]: value }, () => {
       if (chrome.runtime.lastError) {
         setStatus(
@@ -111,11 +115,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       let changed = false;
+      let skippedFullUserGroupInfo = false;
 
-      if (infoFromPACheckbox.checked) {
-        changed = enableInfoFromPA(url) || changed;
-      } else {
-        changed = disableInfoFromPA(url) || changed;
+      if (isWindchillUserOrGroupUrl(url)) {
+        if (infoFromPACheckbox.checked) {
+          changed = enableInfoFromPA(url) || changed;
+        } else {
+          changed = disableInfoFromPA(url) || changed;
+        }
+      } else if (infoFromPACheckbox.checked !== isInfoFromPAEnabled(url)) {
+        console.log(FULL_USER_GROUP_INFO_SKIPPED_MESSAGE);
+        setStatus(FULL_USER_GROUP_INFO_SKIPPED_MESSAGE);
+        infoFromPACheckbox.checked = isInfoFromPAEnabled(url);
+        skippedFullUserGroupInfo = true;
       }
 
       if (jcaDebugCheckbox.checked) {
@@ -125,7 +137,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (!changed) {
-        setStatus('Nothing to change: the parameters are already set.');
+        if (!skippedFullUserGroupInfo) {
+          setStatus('Nothing to change: the parameters are already set.');
+        }
         return;
       }
 
@@ -170,19 +184,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleInfoFromPAChange() {
-    applyCurrentTabSettings();
+    savePopupSetting(INFO_FROM_PA_KEY, infoFromPACheckbox.checked, () => {
+      applyCurrentTabSettings();
+    });
   }
 
   function handleAutoUserGroupInfoChange() {
     const enabled = autoUserGroupInfoCheckbox.checked;
 
-    saveGlobalSetting(AUTO_USER_GROUP_INFO_KEY, enabled, () => {
+    savePopupSetting(AUTO_USER_GROUP_INFO_KEY, enabled, () => {
       syncAutoUserGroupInfoInBackground(enabled);
     });
   }
 
   function handleJcaDebugChange() {
-    applyCurrentTabSettings();
+    savePopupSetting(JCA_DEBUG_KEY, jcaDebugCheckbox.checked, () => {
+      applyCurrentTabSettings();
+    });
   }
 
   syncPopupState();
