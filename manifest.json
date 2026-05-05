@@ -2,16 +2,15 @@
   "manifest_version": 3,
   "name": "Windchill URL Helper (proto)",
   "version": "0.1.0",
-  "description": "Добавляет infoFromPA=true и jcaDebug=1 к URL текущей вкладки Windchill.",
+  "description": "Adds infoFromPA=true and jcaDebug=1 to the current Windchill tab URL.",
   "action": {
     "default_popup": "popup.html",
     "default_title": "Windchill URL Helper"
   },
-  "permissions": [
-    "tabs"
-  ],
-  "host_permissions": [
-    "*://*/Windchill/*",
-    "*://*/windchill/*"
-  ]
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["tabs", "contextMenus"],
+  "host_permissions": ["*://*/Windchill/*", "*://*/windchill/*"]
 }

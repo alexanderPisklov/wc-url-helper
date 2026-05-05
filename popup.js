@@ -1,4 +1,10 @@
-import { addWindchillParams, parseUrl } from './utils/urlHelper.js';
+import {
+  addWindchillParams,
+  disableJcaDebug,
+  enableJcaDebug,
+  isJcaDebugEnabled,
+  parseUrl,
+} from './utils/urlHelper.js';
 import { isWindchillUrl } from './utils/windchillHelper.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -11,43 +17,60 @@ document.addEventListener('DOMContentLoaded', () => {
     statusEl.textContent = text || '';
   }
 
+  function withActiveTab(onTabReady) {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (chrome.runtime.lastError) {
+        setStatus(
+          'Failed to get the active tab: ' + chrome.runtime.lastError.message,
+        );
+        return;
+      }
+
+      if (!tabs || !tabs.length) {
+        setStatus('Failed to get the active tab.');
+        return;
+      }
+
+      onTabReady(tabs[0]);
+    });
+  }
+
+  function syncPopupState() {
+    withActiveTab((tab) => {
+      if (!tab.url) {
+        setStatus('The current tab has no URL.');
+        return;
+      }
+
+      try {
+        const url = parseUrl(tab.url);
+
+        if (!isWindchillUrl(url)) {
+          setStatus('The current tab does not look like a Windchill page.');
+          return;
+        }
+
+        jcaDebugCheckbox.checked = isJcaDebugEnabled(url);
+      } catch (error) {
+        setStatus('Invalid URL: ' + error.message);
+      }
+    });
+  }
+
   function getSelectedOptions() {
     return {
       infoFromPA: infoFromPACheckbox.checked,
-      jcaDebug: jcaDebugCheckbox.checked,
     };
   }
 
   function handleApplyClick() {
     setStatus('');
 
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (chrome.runtime.lastError) {
-        setStatus(
-          '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c ' +
-            '\u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c ' +
-            '\u0430\u043a\u0442\u0438\u0432\u043d\u0443\u044e ' +
-            '\u0432\u043a\u043b\u0430\u0434\u043a\u0443: ' +
-            chrome.runtime.lastError.message,
-        );
-        return;
-      }
-
-      if (!tabs || !tabs.length) {
-        setStatus(
-          '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c ' +
-            '\u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c ' +
-            '\u0430\u043a\u0442\u0438\u0432\u043d\u0443\u044e ' +
-            '\u0432\u043a\u043b\u0430\u0434\u043a\u0443.',
-        );
-        return;
-      }
-
-      const tab = tabs[0];
+    withActiveTab((tab) => {
       const urlString = tab.url;
 
       if (!urlString) {
-        setStatus('\u0423 \u0432\u043a\u043b\u0430\u0434\u043a\u0438 \u043d\u0435\u0442 URL.');
+        setStatus('The current tab has no URL.');
         return;
       }
 
@@ -55,58 +78,44 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         url = parseUrl(urlString);
       } catch (error) {
-        setStatus(
-          '\u041d\u0435\u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u044b\u0439 URL: ' +
-            error.message,
-        );
+        setStatus('Invalid URL: ' + error.message);
         return;
       }
 
       if (!isWindchillUrl(url)) {
-        setStatus(
-          '\u0422\u0435\u043a\u0443\u0449\u0430\u044f ' +
-            '\u0432\u043a\u043b\u0430\u0434\u043a\u0430 ' +
-            '\u043d\u0435 \u043f\u043e\u0445\u043e\u0436\u0430 ' +
-            '\u043d\u0430 Windchill.',
-        );
+        setStatus('The current tab does not look like a Windchill page.');
         return;
       }
 
-      const changed = addWindchillParams(url, getSelectedOptions());
+      let changed = addWindchillParams(url, getSelectedOptions());
+
+      if (jcaDebugCheckbox.checked) {
+        changed = enableJcaDebug(url) || changed;
+      } else {
+        changed = disableJcaDebug(url) || changed;
+      }
 
       if (!changed) {
-        setStatus(
-          '\u041d\u0435\u0447\u0435\u0433\u043e \u043c\u0435\u043d\u044f\u0442\u044c: ' +
-            '\u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b ' +
-            '\u0443\u0436\u0435 \u0441\u0442\u043e\u044f\u0442.',
-        );
+        setStatus('Nothing to change: the parameters are already set.');
         return;
       }
 
       if (typeof tab.id !== 'number') {
-        setStatus(
-          '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c ' +
-            '\u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0438\u0442\u044c ID ' +
-            '\u0432\u043a\u043b\u0430\u0434\u043a\u0438.',
-        );
+        setStatus('Failed to determine the current tab ID.');
         return;
       }
 
       chrome.tabs.update(tab.id, { url: url.toString() }, () => {
         if (chrome.runtime.lastError) {
-          setStatus(
-            '\u041e\u0448\u0438\u0431\u043a\u0430 ' +
-              '\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f ' +
-              '\u0432\u043a\u043b\u0430\u0434\u043a\u0438: ' +
-              chrome.runtime.lastError.message,
-          );
+          setStatus('Failed to update the tab: ' + chrome.runtime.lastError.message);
           return;
         }
 
-        setStatus('URL \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d.');
+        setStatus('URL updated.');
       });
     });
   }
 
+  syncPopupState();
   applyBtn.addEventListener('click', handleApplyClick);
 });
