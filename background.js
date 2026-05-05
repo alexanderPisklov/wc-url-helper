@@ -1,16 +1,15 @@
 import { enableInfoFromPA, parseUrl, toggleJcaDebug } from './utils/urlHelper.js';
+import { COPY_MENU_IDS, handleCopyContextMenuClick } from './utils/contextMenuCopy.js';
 import {
   isWindchillUrl,
   isWindchillUserOrGroupUrl,
 } from './utils/windchillHelper.js';
 
-const WINDCHILL_URL_PATTERNS = [
-  '*://*/Windchill/*',
-  '*://*/windchill/*',
-  '*://*/WINDCHILL/*',
-];
 const MENU_IDS = {
   root: 'windchill-helper',
+  copyOr: COPY_MENU_IDS.copyOr,
+  copyVr: COPY_MENU_IDS.copyVr,
+  copyInfo: COPY_MENU_IDS.copyInfo,
   fullUserGroupInfo: 'full-user-group-info',
   toggleJcaDebug: 'toggle-jca-debug',
 };
@@ -33,8 +32,7 @@ function createContextMenus() {
     chrome.contextMenus.create({
       id: MENU_IDS.root,
       title: 'Windchill Helper',
-      contexts: ['page'],
-      documentUrlPatterns: WINDCHILL_URL_PATTERNS,
+      contexts: ['page', 'selection', 'link'],
     });
 
     logRuntimeError('Failed to create Windchill Helper menu');
@@ -44,17 +42,42 @@ function createContextMenus() {
       parentId: MENU_IDS.root,
       title: 'Full User/Group info',
       contexts: ['page'],
-      documentUrlPatterns: WINDCHILL_URL_PATTERNS,
     });
 
     logRuntimeError('Failed to create Full User/Group info menu item');
+
+    chrome.contextMenus.create({
+      id: MENU_IDS.copyOr,
+      parentId: MENU_IDS.root,
+      title: 'Copy OR',
+      contexts: ['page', 'selection', 'link'],
+    });
+
+    logRuntimeError('Failed to create Copy OR menu item');
+
+    chrome.contextMenus.create({
+      id: MENU_IDS.copyVr,
+      parentId: MENU_IDS.root,
+      title: 'Copy VR',
+      contexts: ['page', 'selection', 'link'],
+    });
+
+    logRuntimeError('Failed to create Copy VR menu item');
+
+    chrome.contextMenus.create({
+      id: MENU_IDS.copyInfo,
+      parentId: MENU_IDS.root,
+      title: 'Copy Info',
+      contexts: ['page', 'selection', 'link'],
+    });
+
+    logRuntimeError('Failed to create Copy Info menu item');
 
     chrome.contextMenus.create({
       id: MENU_IDS.toggleJcaDebug,
       parentId: MENU_IDS.root,
       title: 'Toggle jcaDebug mode',
       contexts: ['page'],
-      documentUrlPatterns: WINDCHILL_URL_PATTERNS,
     });
 
     logRuntimeError('Failed to create Toggle jcaDebug mode menu item');
@@ -172,6 +195,15 @@ chrome.runtime.onStartup.addListener(() => {
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (
+    info.menuItemId === MENU_IDS.copyOr ||
+    info.menuItemId === MENU_IDS.copyVr ||
+    info.menuItemId === MENU_IDS.copyInfo
+  ) {
+    handleCopyContextMenuClick(info, tab);
+    return;
+  }
+
   if (info.menuItemId === MENU_IDS.fullUserGroupInfo) {
     handleFullUserGroupInfo(tab);
   }
@@ -179,6 +211,18 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === MENU_IDS.toggleJcaDebug) {
     handleToggleJcaDebug(tab);
   }
+});
+
+chrome.contextMenus.onShown.addListener((_info, tab) => {
+  const visible = Boolean(tab?.url && isWindchillUrl(tab.url));
+
+  for (const menuId of Object.values(MENU_IDS)) {
+    chrome.contextMenus.update(menuId, { visible }, () => {
+      logRuntimeError(`Failed to update visibility for menu item "${menuId}"`);
+    });
+  }
+
+  chrome.contextMenus.refresh();
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {

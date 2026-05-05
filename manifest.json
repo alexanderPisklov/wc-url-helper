@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Windchill URL Helper (proto)",
   "version": "0.1.0",
-  "description": "Adds infoFromPA=true and jcaDebug=1 to the current Windchill tab URL.",
+  "description": "Windchill URL tools for context-menu copy actions, infoFromPA=true, and jcaDebug=1.",
   "action": {
     "default_popup": "popup.html",
     "default_title": "Windchill URL Helper"
@@ -11,6 +11,17 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["tabs", "contextMenus", "storage"],
-  "host_permissions": ["*://*/Windchill/*", "*://*/windchill/*"]
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "contextMenus",
+    "storage",
+    "scripting",
+    "notifications"
+  ],
+  "host_permissions": [
+    "*://*/Windchill/*",
+    "*://*/windchill/*",
+    "*://*/WINDCHILL/*"
+  ]
 }

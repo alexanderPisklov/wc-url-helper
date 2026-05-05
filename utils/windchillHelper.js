@@ -1,5 +1,10 @@
 export function isWindchillUrl(url) {
-  return url.pathname.toLowerCase().includes('/windchill/');
+  if (!url) {
+    return false;
+  }
+
+  const href = typeof url === 'string' ? url : url.href;
+  return href.toLowerCase().includes('windchill');
 }
 
 export function isWindchillUserOrGroupUrl(url) {
