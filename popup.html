@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Windchill URL Helper</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 10px;
+      min-width: 230px;
+    }
+
+    .row {
+      margin-bottom: 8px;
+    }
+
+    button {
+      width: 100%;
+      padding: 6px;
+      cursor: pointer;
+    }
+
+    #status {
+      font-size: 12px;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <label>
+      <input type="checkbox" id="infoFromPA" checked>
+      &#1044;&#1086;&#1073;&#1072;&#1074;&#1080;&#1090;&#1100; <code>infoFromPA=true</code>
+    </label>
+  </div>
+
+  <div class="row">
+    <label>
+      <input type="checkbox" id="jcaDebug">
+      &#1044;&#1086;&#1073;&#1072;&#1074;&#1080;&#1090;&#1100; <code>jcaDebug=1</code>
+    </label>
+  </div>
+
+  <div class="row">
+    <button id="applyBtn">
+      &#1055;&#1088;&#1080;&#1084;&#1077;&#1085;&#1080;&#1090;&#1100; &#1082;
+      &#1090;&#1077;&#1082;&#1091;&#1097;&#1077;&#1081; &#1074;&#1082;&#1083;&#1072;&#1076;&#1082;&#1077;
+    </button>
+  </div>
+
+  <div class="row">
+    <span id="status"></span>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
