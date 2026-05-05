@@ -2,6 +2,34 @@ export function parseUrl(urlString) {
   return new URL(urlString);
 }
 
+function getHashQueryParts(url) {
+  const rawHash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
+  const queryIndex = rawHash.indexOf('?');
+
+  if (queryIndex === -1) {
+    return {
+      hashPath: rawHash,
+      searchParams: new URLSearchParams(),
+    };
+  }
+
+  return {
+    hashPath: rawHash.slice(0, queryIndex),
+    searchParams: new URLSearchParams(rawHash.slice(queryIndex + 1)),
+  };
+}
+
+function setHashQueryParts(url, hashPath, searchParams) {
+  const hashQuery = searchParams.toString();
+
+  if (hashPath || hashQuery) {
+    url.hash = hashQuery ? `${hashPath}?${hashQuery}` : hashPath;
+    return;
+  }
+
+  url.hash = '';
+}
+
 export function hasParamValue(url, key, value) {
   return url.searchParams.get(key) === value;
 }
@@ -32,24 +60,65 @@ export function toggleParamValue(url, key, enabledValue) {
   return setParamValue(url, key, enabledValue);
 }
 
+export function hasHashParamValue(url, key, value) {
+  const { searchParams } = getHashQueryParts(url);
+  return searchParams.get(key) === value;
+}
+
+export function setHashParamValue(url, key, value) {
+  if (hasHashParamValue(url, key, value)) {
+    return false;
+  }
+
+  const { hashPath, searchParams } = getHashQueryParts(url);
+  searchParams.set(key, value);
+  setHashQueryParts(url, hashPath, searchParams);
+  return true;
+}
+
+export function removeHashParam(url, key) {
+  const { hashPath, searchParams } = getHashQueryParts(url);
+
+  if (!searchParams.has(key)) {
+    return false;
+  }
+
+  searchParams.delete(key);
+  setHashQueryParts(url, hashPath, searchParams);
+  return true;
+}
+
 export function enableInfoFromPA(url) {
-  return setParamValue(url, 'infoFromPA', 'true');
+  const removedFromOuterQuery = removeParam(url, 'infoFromPA');
+  const addedToHashQuery = setHashParamValue(url, 'infoFromPA', 'true');
+
+  return removedFromOuterQuery || addedToHashQuery;
 }
 
 export function isJcaDebugEnabled(url) {
-  return hasParamValue(url, 'jcaDebug', '1');
+  return hasHashParamValue(url, 'jcaDebug', '1');
 }
 
 export function enableJcaDebug(url) {
-  return setParamValue(url, 'jcaDebug', '1');
+  const removedFromOuterQuery = removeParam(url, 'jcaDebug');
+  const addedToHashQuery = setHashParamValue(url, 'jcaDebug', '1');
+
+  return removedFromOuterQuery || addedToHashQuery;
 }
 
 export function disableJcaDebug(url) {
-  return removeParam(url, 'jcaDebug');
+  const removedFromOuterQuery = removeParam(url, 'jcaDebug');
+  const removedFromHashQuery = removeHashParam(url, 'jcaDebug');
+
+  return removedFromOuterQuery || removedFromHashQuery;
 }
 
 export function toggleJcaDebug(url) {
-  return toggleParamValue(url, 'jcaDebug', '1');
+  if (isJcaDebugEnabled(url)) {
+    return disableJcaDebug(url);
+  }
+
+  return enableJcaDebug(url);
 }
 
 export function addWindchillParams(url, options = {}) {
