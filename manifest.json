@@ -3,9 +3,19 @@
   "name": "Windchill URL Helper (proto)",
   "version": "0.1.0",
   "description": "Windchill URL tools for context-menu copy actions, infoFromPA=true, and jcaDebug=1.",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Windchill URL Helper"
+    "default_title": "Windchill Helper",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
   },
   "background": {
     "service_worker": "background.js",

@@ -221,7 +221,7 @@ async function notify(title, message) {
   try {
     await chrome.notifications.create({
       type: 'basic',
-      iconUrl: 'icons/icon128.png',
+      iconUrl: 'icon128.png',
       title,
       message,
     });
