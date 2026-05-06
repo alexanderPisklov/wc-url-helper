@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Windchill URL Helper (proto)",
-  "version": "0.2.0",
+  "version": "0.6.0",
   "description": "Windchill URL tools for context-menu copy actions, infoFromPA=true, and jcaDebug=1.",
   "icons": {
     "16": "icon16.png",
