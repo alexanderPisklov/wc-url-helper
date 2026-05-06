@@ -23,6 +23,12 @@ Context menu actions are only shown for URLs matching Windchill paths. WTUser / 
 
 Some object references depend on how Windchill renders the current page. Copy OR works best on object pages where the OR reference is present in the URL or page structure; for some parts, the Details tab may expose the needed reference more reliably.
 
+## Known Limitations
+
+- Copy OR works best on object Details pages.
+- Some WTPart objects opened from Windchill folder/list navigation may expose only VR references instead of OR references.
+- In such cases, open the Details tab/page before using Copy OR.
+
 ## Screenshots
 
 ![Popup UI](docs/screenshots/popup.png)
