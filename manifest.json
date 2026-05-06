@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Windchill URL Helper (proto)",
+  "name": "Windchill Helper",
   "version": "0.6.0",
-  "description": "Windchill URL tools for context-menu copy actions, infoFromPA=true, and jcaDebug=1.",
+  "description": "Productivity tools for PTC Windchill: copy OR/VR references, object info, URLs, and display full user/group info.",
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
