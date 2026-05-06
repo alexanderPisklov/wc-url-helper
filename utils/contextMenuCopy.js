@@ -65,9 +65,7 @@ export async function handleCopyContextMenuClick(info, tab) {
         errorMessage = 'VR not found.';
       }
     } else if (info.menuItemId === COPY_MENU_IDS.copyInfo) {
-      const title = data.title || '';
-      const cleaned = title.replace(/^[^-]+-\s*/, '');
-      textToCopy = cleaned.trim();
+      textToCopy = data.copyInfoText || '';
     }
 
     if (errorMessage) {
@@ -175,18 +173,38 @@ function extractCurrentObjectData() {
     let orRef = getORFromUrl();
     const vrRef = getVRFromUrl();
     const type = getTypeFromRef(orRef || vrRef);
-
-    if (!orRef && type === 'wt.part.WTPart') {
-      orRef = getWTPartORFromDOM();
-    }
-
-    return {
+    const title = document.title || '';
+    const cleanedTitle = title.replace(/^[^-]+-\s*/, '').trim();
+    const data = {
       url: location.href,
       type,
       orRef,
       vrRef,
-      title: document.title,
+      title,
+      cleanedTitle,
     };
+
+    if (!orRef && type === 'wt.part.WTPart') {
+      orRef = getWTPartORFromDOM();
+      data.orRef = orRef;
+    }
+
+    data.copyInfoText = buildCopyInfoText(data);
+    return data;
+  }
+
+  function buildCopyInfoText(data) {
+    const parts = [];
+
+    if (data.cleanedTitle) {
+      parts.push(data.cleanedTitle.trim());
+    }
+
+    if (data.url) {
+      parts.push(data.url.trim());
+    }
+
+    return parts.join('\n');
   }
 
   return {
